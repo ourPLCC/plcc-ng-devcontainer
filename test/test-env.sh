@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 ourPLCC contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Smoke test: verifies the devcontainer environment has all required tools.
 # Run inside the built container. Exit code 0 = pass, non-zero = fail.
 set -euo pipefail

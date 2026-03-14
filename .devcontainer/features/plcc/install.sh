@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 ourPLCC contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Installs PLCC into /usr/local/lib/plcc.
 # Runs as root during devcontainer image build.
 set -euo pipefail
