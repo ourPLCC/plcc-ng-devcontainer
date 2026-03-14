@@ -62,11 +62,11 @@ jobs:
           MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1-2)
           REPO="https://github.com/ourPLCC/plcc-devcontainer"
 
+          # TODO: update org.opencontainers.image.licenses to GPL-3.0-or-later after REUSE migration
           printf 'FROM %s\nLABEL org.opencontainers.image.version="%s"\nLABEL org.opencontainers.image.source="%s"\nLABEL org.opencontainers.image.description="%s"\nLABEL org.opencontainers.image.licenses="%s"\nLABEL org.plcc.version="%s"\n' \
             "ghcr.io/ourplcc/plcc-devcontainer:latest" \
             "$VERSION" "$REPO" \
             "Prebuilt devcontainer image with PLCC, Java, and Python" \
-            # TODO: update to GPL-3.0-or-later after REUSE migration
             "MIT" "$PLCC_VERSION" \
             > Dockerfile.labels
 

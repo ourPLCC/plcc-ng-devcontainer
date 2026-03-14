@@ -43,11 +43,11 @@ jobs:
         # We re-tag it with OCI labels and push as the PR-specific tag.
         run: |
           PR_TAG="ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}"
+          # TODO: update org.opencontainers.image.licenses to GPL-3.0-or-later after REUSE migration
           printf 'FROM %s\nLABEL org.opencontainers.image.source="%s"\nLABEL org.opencontainers.image.description="%s"\nLABEL org.opencontainers.image.licenses="%s"\nLABEL org.plcc.version="%s"\n' \
             "ghcr.io/ourplcc/plcc-devcontainer:latest" \
             "https://github.com/ourPLCC/plcc-devcontainer" \
             "Prebuilt devcontainer image with PLCC, Java, and Python" \
-            # TODO: update to GPL-3.0-or-later after REUSE migration
             "MIT" \
             "${{ steps.plcc_version.outputs.version }}" \
             > Dockerfile.labels
