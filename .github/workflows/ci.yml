@@ -26,7 +26,8 @@ jobs:
       - name: Build devcontainer image
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}
+          imageName: ghcr.io/ourplcc/plcc-devcontainer
+          imageTag: pr-${{ github.event.pull_request.number }}
           push: always
           runCmd: bash test/test-env.sh
 

@@ -44,7 +44,8 @@ jobs:
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/ourplcc/plcc-devcontainer:${{ steps.semantic.outputs.new_release_version }}
+          imageName: ghcr.io/ourplcc/plcc-devcontainer
+          imageTag: ${{ steps.semantic.outputs.new_release_version }}
           push: always
           runCmd: bash test/test-env.sh
 
