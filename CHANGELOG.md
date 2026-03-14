@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/ourPLCC/plcc-devcontainer/compare/v1.0.2...v1.0.3) (2026-03-14)
+
+
+### Bug Fixes
+
+* build locally with devcontainers/ci then push with explicit tags ([7239f17](https://github.com/ourPLCC/plcc-devcontainer/commit/7239f17e23f400b9b59a7e21c6c7426a298bd13b))
+
 ## [1.0.2](https://github.com/ourPLCC/plcc-devcontainer/compare/v1.0.1...v1.0.2) (2026-03-14)
 
 
