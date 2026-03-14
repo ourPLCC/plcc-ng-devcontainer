@@ -1,0 +1,21 @@
+version = 1
+SPDX-PackageName = "plcc-devcontainer"
+SPDX-PackageSupplier = "Organization: ourPLCC"
+SPDX-PackageDownloadLocation = "NOASSERTION"
+
+[[annotations]]
+path = ["**"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 ourPLCC contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = [
+    "README.md",
+    "CLAUDE.md",
+    "CODE_OF_CONDUCT.md",
+    "docs/**"
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 ourPLCC contributors"
+SPDX-License-Identifier = "GFDL-1.3-or-later"
