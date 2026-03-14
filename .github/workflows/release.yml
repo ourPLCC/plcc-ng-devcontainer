@@ -66,7 +66,7 @@ jobs:
             "ghcr.io/ourplcc/plcc-devcontainer:latest" \
             "$VERSION" "$REPO" \
             "Prebuilt devcontainer image with PLCC, Java, and Python" \
-            "MIT" "$PLCC_VERSION" \
+            "MIT" "$PLCC_VERSION" \  # TODO: update to GPL-3.0-or-later after REUSE migration
             > Dockerfile.labels
 
           docker buildx build \
