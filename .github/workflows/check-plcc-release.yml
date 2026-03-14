@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 ourPLCC contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 name: Check PLCC Release
 
 on:
