@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build devcontainer image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}
+          push: always
+          runCmd: bash test/test-env.sh
+
+      - name: Read PLCC version
+        id: plcc_version
+        run: |
+          echo "version=$(jq -r '.features["./features/plcc"].version' .devcontainer/devcontainer.json)" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Apply OCI labels
+        # Note: this step pulls the PR image from GHCR (just pushed above) and re-pushes
+        # with labels added. The labeled image is a thin wrapper — functionally identical
+        # to the image that passed the smoke test.
+        run: |
+          printf 'FROM %s\nLABEL org.opencontainers.image.source="%s"\nLABEL org.opencontainers.image.description="%s"\nLABEL org.opencontainers.image.licenses="%s"\nLABEL org.plcc.version="%s"\n' \
+            "ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}" \
+            "https://github.com/ourPLCC/plcc-devcontainer" \
+            "Prebuilt devcontainer image with PLCC, Java, and Python" \
+            "MIT" \
+            "${{ steps.plcc_version.outputs.version }}" \
+            > Dockerfile.labels
+          docker buildx build \
+            -f Dockerfile.labels \
+            -t "ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}" \
+            --push .
+
+      - name: Comment image tag on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🐳 **PR image built:** \`ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}\`\n\nTo test manually, update \`.devcontainer/devcontainer.json\` to use this image tag.`
+            })
