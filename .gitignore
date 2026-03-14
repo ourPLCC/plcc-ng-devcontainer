@@ -1,2 +1,8 @@
 # Generated at build time by CI workflows — do not commit
 Dockerfile.labels
+
+# Node (semantic-release dev deps, local validation only)
+node_modules/
+package.json
+package-lock.json
+npm-debug.log*
