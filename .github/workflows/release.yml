@@ -29,6 +29,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build and test devcontainer image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/ourplcc/plcc-devcontainer
+          push: never
+          runCmd: bash test/test-env.sh
+
       - name: Run semantic-release
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
@@ -41,14 +48,6 @@ jobs:
         run: |
           echo "version=$(jq -r '.features["./features/plcc"].version' .devcontainer/devcontainer.json)" \
             >> "$GITHUB_OUTPUT"
-
-      - name: Build and test devcontainer image
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: devcontainers/ci@v0.3
-        with:
-          imageName: ghcr.io/ourplcc/plcc-devcontainer
-          push: never
-          runCmd: bash test/test-env.sh
 
       - name: Apply OCI labels and push all tags
         if: steps.semantic.outputs.new_release_published == 'true'
