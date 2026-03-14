@@ -1,0 +1,7 @@
+// Template for downstream projects. Copy this to your project's
+// .devcontainer/devcontainer.json and adjust as needed.
+// This file is NOT used by this repository's own devcontainer.
+{
+  "name": "My PLCC Project",
+  "image": "ghcr.io/ourplcc/plcc-devcontainer:1"
+}
