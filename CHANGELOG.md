@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/ourPLCC/plcc-devcontainer/compare/v1.0.4...v1.1.0) (2026-05-30)
+
+
+### Bug Fixes
+
+* **ubuntu:** bump to latest LTS ([a5b6cab](https://github.com/ourPLCC/plcc-devcontainer/commit/a5b6cab885ec8e91847ab5f6c1ab45c6cb4d256f))
+
+
+### Features
+
+* upgrade to ubuntu-26.04, java 21, python 3.12 ([b7f76f5](https://github.com/ourPLCC/plcc-devcontainer/commit/b7f76f513bb7552c3dcdb7bce1017187ee7c0051))
+
 ## [1.0.4](https://github.com/ourPLCC/plcc-devcontainer/compare/v1.0.3...v1.0.4) (2026-03-14)
 
 
