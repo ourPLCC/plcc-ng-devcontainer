@@ -1,5 +1,5 @@
 version = 1
-SPDX-PackageName = "plcc-devcontainer"
+SPDX-PackageName = "plcc-ng-devcontainer"
 SPDX-PackageSupplier = "Organization: ourPLCC"
 SPDX-PackageDownloadLocation = "NOASSERTION"
 
