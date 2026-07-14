@@ -128,6 +128,12 @@ keeps the quick start and links to both):
    how the weekly bump PR works; how the feature is versioned and published
    separately from the images; how to test a PR build via its `pr-{N}` tag.
 
+**Layout convention:** audience-facing documentation lives directly under
+`docs/`. Design specs and implementation plans produced during development
+live in the superpowers plugin's default locations — `docs/superpowers/specs/`
+and `docs/superpowers/plans/` — so the tooling and the repo agree on where
+they go.
+
 ## Repurposing cleanup
 
 One-time steps when converting this clone:
@@ -137,8 +143,8 @@ One-time steps when converting this clone:
   plcc-devcontainer's version line. Commit history is kept as provenance.
 - Reset `CHANGELOG.md`.
 - Sweep all `plcc-devcontainer` / `ourPLCC/plcc` references: README,
-  workflows, image/feature names, tests. Keep the old `docs/` design notes as
-  historical record.
+  workflows, image/feature names, tests. Keep the old specs and plans in
+  `docs/superpowers/` as historical record.
 - Replace the root `devcontainer.json` template and this repo's own
   `.devcontainer/` to use the new feature/images.
 
