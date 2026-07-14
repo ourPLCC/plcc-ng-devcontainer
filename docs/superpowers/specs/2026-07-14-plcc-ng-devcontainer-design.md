@@ -38,9 +38,11 @@ installs **only plcc-ng**, via `pipx install plcc-ng==<version>` from PyPI.
   official features (`ghcr.io/devcontainers/features/java`, `.../python`,
   `.../node`) and the community Haskell feature
   (`ghcr.io/devcontainers-extra/features/haskell`).
-- **Published** as an OCI artifact with
-  [devcontainers/action](https://github.com/devcontainers/action) so any
-  project can reference it directly.
+- **Published** as an OCI artifact via the devcontainer CLI
+  (`devcontainer features publish --namespace ourplcc/features`) so any
+  project can reference it directly. (The devcontainers/action publisher is
+  not used: it derives the namespace from the repository name, which would
+  yield `ourplcc/plcc-ng-devcontainer/plcc-ng`.)
 - **Versioned independently** via the `version` field in
   `devcontainer-feature.json` (the publish action only pushes when it changes).
 
