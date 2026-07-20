@@ -6,21 +6,26 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-  issues: write
+permissions: {}
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [plcc-ng, plcc-ng-full]
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Free disk space for large image build
+        if: matrix.variant == 'plcc-ng-full'
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -29,12 +34,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and test devcontainer image
-        uses: devcontainers/ci@v0.3
+      - name: Install devcontainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Determine architecture
+        id: arch
+        run: echo "arch=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
+
+      - name: Build candidate image and run smoke test
+        run: |
+          bash scripts/build-and-test.sh "${{ matrix.variant }}" \
+            "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:${{ github.sha }}-${{ steps.arch.outputs.arch }}"
+
+      - name: Push candidate image
+        run: docker push "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:${{ github.sha }}-${{ steps.arch.outputs.arch }}"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          imageName: ghcr.io/ourplcc/plcc-devcontainer
-          push: never
-          runCmd: bash test/test-env.sh
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Run semantic-release
         id: semantic
@@ -42,37 +70,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Read PLCC version
-        if: steps.semantic.outputs.new_release_published == 'true'
-        id: plcc_version
-        run: |
-          echo "version=$(jq -r '.features["./features/plcc"].version' .devcontainer/devcontainer.json)" \
-            >> "$GITHUB_OUTPUT"
+  publish-images:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        variant: [plcc-ng, plcc-ng-full]
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply OCI labels and push all tags
-        if: steps.semantic.outputs.new_release_published == 'true'
-        # devcontainers/ci built the image locally as ghcr.io/ourplcc/plcc-devcontainer:latest.
-        # We re-tag it with OCI labels and push with all floating version tags.
+      - name: Tag multi-arch manifests
         env:
-          VERSION: ${{ steps.semantic.outputs.new_release_version }}
-          PLCC_VERSION: ${{ steps.plcc_version.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
+          IMAGE: ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}
         run: |
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1-2)
-          REPO="https://github.com/ourPLCC/plcc-devcontainer"
+          docker buildx imagetools create \
+            -t "$IMAGE:$VERSION" \
+            -t "$IMAGE:$MAJOR" \
+            -t "$IMAGE:$MAJOR_MINOR" \
+            -t "$IMAGE:latest" \
+            "$IMAGE:${{ github.sha }}-amd64" \
+            "$IMAGE:${{ github.sha }}-arm64"
 
-          # TODO: update org.opencontainers.image.licenses to GPL-3.0-or-later after REUSE migration
-          printf 'FROM %s\nLABEL org.opencontainers.image.version="%s"\nLABEL org.opencontainers.image.source="%s"\nLABEL org.opencontainers.image.description="%s"\nLABEL org.opencontainers.image.licenses="%s"\nLABEL org.plcc.version="%s"\n' \
-            "ghcr.io/ourplcc/plcc-devcontainer:latest" \
-            "$VERSION" "$REPO" \
-            "Prebuilt devcontainer image with PLCC, Java, and Python" \
-            "MIT" "$PLCC_VERSION" \
-            > Dockerfile.labels
+  publish-feature:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-          docker buildx build \
-            -f Dockerfile.labels \
-            -t "ghcr.io/ourplcc/plcc-devcontainer:$VERSION" \
-            -t "ghcr.io/ourplcc/plcc-devcontainer:$MAJOR" \
-            -t "ghcr.io/ourplcc/plcc-devcontainer:$MAJOR_MINOR" \
-            -t "ghcr.io/ourplcc/plcc-devcontainer:latest" \
-            --push .
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install devcontainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Publish plcc-ng feature
+        # Skips versions that are already published.
+        run: |
+          devcontainer features publish \
+            --registry ghcr.io \
+            --namespace ourplcc/features \
+            ./src
