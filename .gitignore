@@ -6,3 +6,7 @@ node_modules/
 package.json
 package-lock.json
 npm-debug.log*
+
+# Synced/copied at build time by scripts — do not commit
+images/*/.devcontainer/features/
+images/*/smoke-test.sh

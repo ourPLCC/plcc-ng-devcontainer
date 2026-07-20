@@ -1,0 +1,10 @@
+{
+    "name": "PLCC-NG (full)",
+    "build": { "dockerfile": "Dockerfile" },
+    "features": {
+        "ghcr.io/devcontainers/features/java:1": { "version": "21" },
+        "ghcr.io/devcontainers/features/node:1": { "version": "lts" },
+        "ghcr.io/devcontainers-extra/features/haskell:2": {},
+        "./features/plcc-ng": { "version": "1.0.0" }
+    }
+}
