@@ -76,11 +76,26 @@ One-time steps when this repository is first published to GitHub:
 
 1. Create `ourPLCC/plcc-ng-devcontainer` and push `main` (no tags — the
    first release must compute as 1.0.0).
-2. Add the `RELEASE_TOKEN` repository secret: a GitHub App token (preferred)
-   or classic PAT with `repo` + `write:packages`. Required because
-   `GITHUB_TOKEN` cannot push semantic-release's changelog commit to the
-   protected `main` branch.
-3. Protect `main` (require PRs and green CI).
+2. Add two repository secrets for the release bot's GitHub App: `APP_ID`
+   (the App's numeric ID, from its General settings page) and
+   `APP_PRIVATE_KEY` (a private key generated on that same page — the
+   full contents of the downloaded `.pem` file). `release.yml` and
+   `check-plcc-ng-release.yml` each mint a fresh ~1-hour installation
+   token from these at the start of their run
+   (`actions/create-github-app-token`), rather than storing a long-lived
+   token as a secret — installation tokens can't be pasted once and kept,
+   since they expire in about an hour. Required because `GITHUB_TOKEN`
+   cannot push semantic-release's changelog commit to the protected
+   `main` branch. The App must be installed with access to this repo
+   (org Settings → Installations → the App → Configure → Repository
+   access) and granted `Contents: Read and write` and `Pull requests:
+   Read and write` permissions.
+3. Protect `main` with a ruleset (Settings → Rules → Rulesets): require a
+   pull request before merging and require the CI status check. Add the
+   release bot's GitHub App to the ruleset's bypass list, or semantic-release's
+   push will be rejected same as any other direct push — the App only
+   appears as a selectable bypass actor once its installation has been
+   granted access to this specific repo (step 2).
 4. Merge any PR with a `feat:` commit → first release publishes everything.
 5. In the ourPLCC org package settings, make these GHCR packages **public**:
    `devcontainers/plcc-ng`, `devcontainers/plcc-ng-full`,
