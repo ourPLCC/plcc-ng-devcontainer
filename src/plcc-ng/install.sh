@@ -23,7 +23,7 @@ if [ -z "$PIPX" ] && [ -x /usr/local/py-utils/bin/pipx ]; then
 fi
 
 if [ -n "$PIPX" ]; then
-    "$PIPX" install "$SPEC"
+    "$PIPX" install --force "$SPEC"
 else
     # Fallback when a base image provides python but no pipx.
     python3 -m pip install "$SPEC" \

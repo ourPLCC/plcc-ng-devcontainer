@@ -6,6 +6,10 @@
 set -euo pipefail
 
 VARIANT="${1:?usage: smoke-test.sh <plcc-ng|plcc-ng-full>}"
+case "$VARIANT" in
+    plcc-ng|plcc-ng-full) ;;
+    *) echo "usage: smoke-test.sh <plcc-ng|plcc-ng-full>" >&2; exit 2 ;;
+esac
 
 PASS=0
 FAIL=0
@@ -13,7 +17,7 @@ FAIL=0
 check() {
     local label="$1"
     local cmd="$2"
-    if eval "$cmd" > /dev/null 2>&1; then
+    if bash -c "$cmd" > /dev/null 2>&1; then
         echo "PASS: $label"
         PASS=$((PASS + 1))
     else
