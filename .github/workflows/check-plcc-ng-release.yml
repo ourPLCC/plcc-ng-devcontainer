@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2026 ourPLCC contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Check plcc-ng Release
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
+  workflow_dispatch:        # Allow manual trigger for testing
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Check for new plcc-ng release on PyPI
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          LATEST=$(curl -fsSL https://pypi.org/pypi/plcc-ng/json | jq -r '.info.version')
+          echo "Latest plcc-ng release: $LATEST"
+
+          CURRENT=$(jq -r '.features["./features/plcc-ng"].version' \
+            images/plcc-ng/.devcontainer/devcontainer.json)
+          echo "Currently pinned: $CURRENT"
+
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "Already up to date. No action needed."
+            exit 0
+          fi
+
+          BRANCH="chore/update-plcc-ng-${LATEST}"
+
+          # Idempotency guard: PR branch already exists
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
+            echo "Branch '$BRANCH' already exists. PR already open."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          for cfg in images/plcc-ng/.devcontainer/devcontainer.json \
+                     images/plcc-ng-full/.devcontainer/devcontainer.json; do
+            jq --arg v "$LATEST" \
+              '.features["./features/plcc-ng"].version = $v' \
+              "$cfg" > tmp.json
+            mv tmp.json "$cfg"
+          done
+
+          git add images
+          git commit -m "fix: update plcc-ng to ${LATEST}"
+
+          # Race-condition guard: treat push failure as no-op
+          git push origin "$BRANCH" || {
+            echo "Push failed — branch may already exist. Exiting cleanly."
+            exit 0
+          }
+
+          gh pr create \
+            --title "fix: update plcc-ng to ${LATEST}" \
+            --label "automated" \
+            --body "Automated update: plcc-ng has a new release (${LATEST}).
+
+          CI will build and test both images on this PR. Merge if green — merging triggers the release workflow, which publishes new versioned images automatically.
+
+          PyPI release: https://pypi.org/project/plcc-ng/${LATEST}/" \
+            --base main \
+            --head "$BRANCH"
