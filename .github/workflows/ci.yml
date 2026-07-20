@@ -6,14 +6,13 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-  packages: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   test-feature:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +28,11 @@ jobs:
             --base-image mcr.microsoft.com/devcontainers/base:ubuntu
 
   build:
+    needs: test-feature
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +66,8 @@ jobs:
   comment:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - name: Comment image tags on PR
         uses: actions/github-script@v7
