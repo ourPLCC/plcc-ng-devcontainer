@@ -1,0 +1,18 @@
+{
+    "id": "plcc-ng",
+    "version": "1.0.0",
+    "name": "PLCC-NG",
+    "description": "Installs plcc-ng (Programming Language Compiler Compiler, next generation) from PyPI.",
+    "documentationURL": "https://github.com/ourPLCC/plcc-ng-devcontainer",
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": ["latest", "1.0.0"],
+            "description": "PyPI version of plcc-ng to install (e.g. '1.0.0'), or 'latest' for the newest release."
+        }
+    },
+    "dependsOn": {
+        "ghcr.io/devcontainers/features/python:1": { "version": "3.12" }
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "pinned_version": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "plcc-ng": { "version": "1.0.0" }
+        }
+    }
+}

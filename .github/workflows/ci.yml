@@ -6,17 +6,44 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-  packages: write
-  pull-requests: write
+permissions: {}
 
 jobs:
-  build:
+  test-feature:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install devcontainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Test plcc-ng feature
+        run: |
+          devcontainer features test \
+            --project-folder . \
+            --features plcc-ng \
+            --base-image mcr.microsoft.com/devcontainers/base:ubuntu
+
+  build:
+    needs: test-feature
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [plcc-ng, plcc-ng-full]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free disk space for large image build
+        if: matrix.variant == 'plcc-ng-full'
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -25,44 +52,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and test devcontainer image
-        uses: devcontainers/ci@v0.3
-        with:
-          imageName: ghcr.io/ourplcc/plcc-devcontainer
-          push: never
-          runCmd: bash test/test-env.sh
+      - name: Install devcontainer CLI
+        run: npm install -g @devcontainers/cli
 
-      - name: Read PLCC version
-        id: plcc_version
+      - name: Build image and run smoke test
         run: |
-          echo "version=$(jq -r '.features["./features/plcc"].version' .devcontainer/devcontainer.json)" \
-            >> "$GITHUB_OUTPUT"
+          bash scripts/build-and-test.sh "${{ matrix.variant }}" \
+            "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:pr-${{ github.event.pull_request.number }}"
 
-      - name: Apply OCI labels and push PR image
-        # devcontainers/ci built the image locally as ghcr.io/ourplcc/plcc-devcontainer:latest.
-        # We re-tag it with OCI labels and push as the PR-specific tag.
-        run: |
-          PR_TAG="ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}"
-          # TODO: update org.opencontainers.image.licenses to GPL-3.0-or-later after REUSE migration
-          printf 'FROM %s\nLABEL org.opencontainers.image.source="%s"\nLABEL org.opencontainers.image.description="%s"\nLABEL org.opencontainers.image.licenses="%s"\nLABEL org.plcc.version="%s"\n' \
-            "ghcr.io/ourplcc/plcc-devcontainer:latest" \
-            "https://github.com/ourPLCC/plcc-devcontainer" \
-            "Prebuilt devcontainer image with PLCC, Java, and Python" \
-            "MIT" \
-            "${{ steps.plcc_version.outputs.version }}" \
-            > Dockerfile.labels
-          docker buildx build \
-            -f Dockerfile.labels \
-            -t "$PR_TAG" \
-            --push .
+      - name: Push PR image
+        run: docker push "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:pr-${{ github.event.pull_request.number }}"
 
-      - name: Comment image tag on PR
+  comment:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment image tags on PR
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🐳 **PR image built:** \`ghcr.io/ourplcc/plcc-devcontainer:pr-${{ github.event.pull_request.number }}\`\n\nTo test manually, update \`.devcontainer/devcontainer.json\` to use this image tag.`
+              body: [
+                '🐳 **PR images built** (amd64 only):',
+                '- `ghcr.io/ourplcc/devcontainers/plcc-ng:pr-${{ github.event.pull_request.number }}`',
+                '- `ghcr.io/ourplcc/devcontainers/plcc-ng-full:pr-${{ github.event.pull_request.number }}`',
+                '',
+                'To test, point a devcontainer.json `image` at one of these tags.'
+              ].join('\n')
             })

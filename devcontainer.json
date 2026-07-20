@@ -1,7 +1,8 @@
-// Template for downstream projects. Copy this to your project's
+// Template for student/course projects. Copy this to your project's
 // .devcontainer/devcontainer.json and adjust as needed.
 // This file is NOT used by this repository's own devcontainer.
+// If your course uses Haskell, use image ghcr.io/ourplcc/devcontainers/plcc-ng-full:1
 {
-  "name": "My PLCC Project",
-  "image": "ghcr.io/ourplcc/plcc-devcontainer:1"
+    "name": "My PLCC-NG Project",
+    "image": "ghcr.io/ourplcc/devcontainers/plcc-ng:1"
 }
