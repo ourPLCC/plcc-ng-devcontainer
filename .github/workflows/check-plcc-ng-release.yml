@@ -7,6 +7,8 @@ on:
     - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
   workflow_dispatch:        # Allow manual trigger for testing
 
+permissions: {}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -67,10 +69,13 @@ jobs:
           gh pr create \
             --title "fix: update plcc-ng to ${LATEST}" \
             --label "automated" \
-            --body "Automated update: plcc-ng has a new release (${LATEST}).
+            --body "$(cat <<EOF
+          Automated update: plcc-ng has a new release (${LATEST}).
 
           CI will build and test both images on this PR. Merge if green — merging triggers the release workflow, which publishes new versioned images automatically.
 
-          PyPI release: https://pypi.org/project/plcc-ng/${LATEST}/" \
+          PyPI release: https://pypi.org/project/plcc-ng/${LATEST}/
+          EOF
+          )" \
             --base main \
             --head "$BRANCH"
