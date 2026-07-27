@@ -1,9 +1,17 @@
 {
-    "name": "PLCC-NG",
-    "build": { "dockerfile": "Dockerfile" },
-    "features": {
-        "ghcr.io/devcontainers/features/java:1": { "version": "21" },
-        "ghcr.io/devcontainers/features/node:1": { "version": "lts" },
-        "./features/plcc-ng": { "version": "1.0.0" }
+  "name": "PLCC-NG",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "./features/plcc-ng": {
+      "version": "2.0.0"
     }
+  }
 }
