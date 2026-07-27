@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/ourPLCC/plcc-ng-devcontainer/compare/v1.0.0...v2.0.0) (2026-07-27)
+
+
+### Features
+
+* update plcc-ng to 2.0.0 ([f7b4640](https://github.com/ourPLCC/plcc-ng-devcontainer/commit/f7b4640d2f47a40e184622611d24bfbb88e594d6))
+
+
+### BREAKING CHANGES
+
+* plcc-ng 2.0.0 is a new major version (was 1.0.0). Images already published under the previous major tag keep plcc-ng 1.0.0; this release publishes under a new major tag.
+
 # 1.0.0 (2026-07-20)
 
 
