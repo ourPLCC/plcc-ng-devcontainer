@@ -3,7 +3,13 @@
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "features": {
         "ghcr.io/devcontainers/features/node:1": {},
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+        // moby:false installs Docker CE instead of Moby. The base image tag
+        // floats, and it has rolled forward to Ubuntu 26.04 "resolute", for
+        // which no moby-cli packages exist yet — with the default the feature
+        // aborts and the container will not open. Revisit once moby packages
+        // catch up, or drop this line if the base is ever pinned to an older
+        // release.
+        "ghcr.io/devcontainers/features/docker-in-docker:2": { "moby": false }
     },
     "postCreateCommand": "npm install -g @devcontainers/cli"
 }
