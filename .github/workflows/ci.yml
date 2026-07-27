@@ -9,18 +9,74 @@ on:
 permissions: {}
 
 jobs:
+  # Building both images takes tens of minutes, and most of that is wasted on
+  # PRs that touch only workflows or docs. Every job below still runs and still
+  # posts its check — only the expensive steps are guarded. Skipping the jobs
+  # themselves would leave required status checks unreported and block merges.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      feature: ${{ steps.filter.outputs.feature }}
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # base..head diff needs both endpoints
+
+      - name: Detect which parts of the build a change can affect
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # if/else rather than `match ... && VAR=true`: this runs under bash -e,
+          # where a trailing failed && list would abort the step.
+          match() { echo "$CHANGED" | grep -qE "$1"; }
+
+          # The feature and its own tests. test/plcc-ng/** drives
+          # `devcontainer features test` and nothing else.
+          if match '^(src|test/plcc-ng)/|^\.github/workflows/ci\.yml$'; then
+            FEATURE=true
+          else
+            FEATURE=false
+          fi
+
+          # Image contents and how they are built/verified. build-and-test.sh
+          # copies only test/smoke-test.sh into the image, so the rest of
+          # test/ cannot change a build result.
+          if match '^(images|src|scripts)/|^test/smoke-test\.sh$|^\.github/workflows/ci\.yml$'; then
+            IMAGES=true
+          else
+            IMAGES=false
+          fi
+
+          echo "feature=$FEATURE" >> "$GITHUB_OUTPUT"
+          echo "images=$IMAGES" >> "$GITHUB_OUTPUT"
+          echo "=> feature tests: $FEATURE | image builds: $IMAGES"
+
   test-feature:
+    needs: changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - name: Checkout
+        if: needs.changes.outputs.feature == 'true'
         uses: actions/checkout@v4
 
       - name: Install devcontainer CLI
+        if: needs.changes.outputs.feature == 'true'
         run: npm install -g @devcontainers/cli
 
       - name: Test plcc-ng feature
+        if: needs.changes.outputs.feature == 'true'
         run: |
           devcontainer features test \
             --project-folder . \
@@ -28,7 +84,7 @@ jobs:
             --base-image mcr.microsoft.com/devcontainers/base:ubuntu
 
   build:
-    needs: test-feature
+    needs: [changes, test-feature]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,13 +95,15 @@ jobs:
         variant: [plcc-ng, plcc-ng-full]
     steps:
       - name: Checkout
+        if: needs.changes.outputs.images == 'true'
         uses: actions/checkout@v4
 
       - name: Free disk space for large image build
-        if: matrix.variant == 'plcc-ng-full'
+        if: needs.changes.outputs.images == 'true' && matrix.variant == 'plcc-ng-full'
         run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
 
       - name: Log in to GHCR
+        if: needs.changes.outputs.images == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -53,23 +111,28 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install devcontainer CLI
+        if: needs.changes.outputs.images == 'true'
         run: npm install -g @devcontainers/cli
 
       - name: Build image and run smoke test
+        if: needs.changes.outputs.images == 'true'
         run: |
           bash scripts/build-and-test.sh "${{ matrix.variant }}" \
             "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:pr-${{ github.event.pull_request.number }}"
 
       - name: Push PR image
+        if: needs.changes.outputs.images == 'true'
         run: docker push "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:pr-${{ github.event.pull_request.number }}"
 
   comment:
-    needs: build
+    needs: [changes, build]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
       - name: Comment image tags on PR
+        # No images were built, so there are no tags to advertise.
+        if: needs.changes.outputs.images == 'true'
         uses: actions/github-script@v7
         with:
           script: |
