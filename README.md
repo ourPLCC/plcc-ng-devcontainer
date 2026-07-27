@@ -11,12 +11,12 @@ Add a `.devcontainer/devcontainer.json` to your project:
 ```json
 {
   "name": "My PLCC-NG Project",
-  "image": "ghcr.io/ourplcc/devcontainers/plcc-ng:1"
+  "image": "ghcr.io/ourplcc/devcontainers/plcc-ng:2"
 }
 ```
 
 If your course implements language semantics in **Haskell**, use
-`ghcr.io/ourplcc/devcontainers/plcc-ng-full:1` instead.
+`ghcr.io/ourplcc/devcontainers/plcc-ng-full:2` instead.
 
 Open the project in [GitHub Codespaces](https://codespaces.github.com) or
 [VS Code with the Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).

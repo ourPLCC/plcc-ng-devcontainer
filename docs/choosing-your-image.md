@@ -12,7 +12,7 @@ that uses [plcc-ng](https://github.com/ourPLCC/plcc-ng).
   ```json
   {
     "name": "My PLCC-NG Project",
-    "image": "ghcr.io/ourplcc/devcontainers/plcc-ng:1"
+    "image": "ghcr.io/ourplcc/devcontainers/plcc-ng:2"
   }
   ```
 
@@ -21,7 +21,7 @@ that uses [plcc-ng](https://github.com/ourPLCC/plcc-ng).
   ```json
   {
     "name": "My PLCC-NG Project",
-    "image": "ghcr.io/ourplcc/devcontainers/plcc-ng-full:1"
+    "image": "ghcr.io/ourplcc/devcontainers/plcc-ng-full:2"
   }
   ```
 
@@ -44,13 +44,18 @@ Both images are published for amd64 (Codespaces) and arm64 (Apple Silicon).
 | Tag | Meaning |
 |---|---|
 | `latest` | Most recent release |
-| `1` | Latest `1.x.x` release |
-| `1.2` | Latest `1.2.x` release |
-| `1.2.3` | Exact release (immutable) |
+| `2` | Latest `2.x.x` release |
+| `2.1` | Latest `2.1.x` release |
+| `2.1.3` | Exact release (immutable) |
 
-**Recommendation for courses:** pin the major tag (e.g. `:1`) for the
+**Recommendation for courses:** pin the major tag (e.g. `:2`) for the
 semester. You get plcc-ng updates and security patches automatically but are
 protected from breaking changes mid-course.
+
+The image's major tag tracks plcc-ng's major version: `:2` carries plcc-ng
+2.x, and `:1` stays on plcc-ng 1.x. A course already running on `:1` is not
+affected by the 2.0 release and keeps receiving 1.x patches — switch to `:2`
+between terms, not mid-semester.
 
 ## Custom setups: the feature
 
@@ -71,7 +76,7 @@ installs plcc-ng and Python; add language features as needed:
 
 The feature's `version` option pins a plcc-ng release from
 [PyPI](https://pypi.org/project/plcc-ng/), e.g.
-`{ "version": "1.0.0" }`; the default is `latest`.
+`{ "version": "2.0.0" }`; the default is `latest`.
 
 Note: the first Codespaces start of a feature-composed devcontainer builds
 the container from scratch (several minutes). The prebuilt images exist to

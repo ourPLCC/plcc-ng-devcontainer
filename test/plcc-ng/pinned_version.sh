@@ -9,7 +9,7 @@ source dev-container-features-test-lib
 # Must match the version pinned in scenarios.json. Both are updated together
 # by .github/workflows/check-plcc-ng-release.yml — keep this line's shape
 # (EXPECTED_VERSION="<version>") intact so that update keeps working.
-EXPECTED_VERSION="1.0.0"
+EXPECTED_VERSION="2.0.0"
 
 check "plcc-version runs" plcc-version
 check "exact version installed" bash -c \
