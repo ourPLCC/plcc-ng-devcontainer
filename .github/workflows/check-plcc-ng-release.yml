@@ -44,43 +44,114 @@ jobs:
 
           BRANCH="chore/update-plcc-ng-${LATEST}"
 
-          # Idempotency guard: PR branch already exists
-          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
-            echo "Branch '$BRANCH' already exists. PR already open."
+          # The image's major tag is the stability contract for courses
+          # (docs/choosing-your-image.md tells them to pin it for a term), so a
+          # new plcc-ng major has to release the image as a major too. Otherwise
+          # a patch release would move :N onto a new major of the tool.
+          # Deliberately `feat:` and not `feat!:` — the Angular preset that
+          # semantic-release uses does not parse the `!` shorthand, so a
+          # `feat!:` subject whose BREAKING CHANGE footer went missing yields
+          # no release at all. `feat:` degrades to a minor instead.
+          if [ "${LATEST%%.*}" != "${CURRENT%%.*}" ]; then
+            COMMIT_SUBJECT="feat: update plcc-ng to ${LATEST}"
+            COMMIT_BODY="BREAKING CHANGE: plcc-ng ${LATEST} is a new major version (was ${CURRENT}). Images already published under the previous major tag keep plcc-ng ${CURRENT}; this release publishes under a new major tag."
+          else
+            COMMIT_SUBJECT="fix: update plcc-ng to ${LATEST}"
+            COMMIT_BODY=""
+          fi
+          echo "Release type: $COMMIT_SUBJECT"
+
+          # Idempotency guard: keyed on the PR, not the branch. A branch with no
+          # PR means an earlier run died between push and PR creation; that must
+          # be recoverable, not mistaken for work already done.
+          if [ -n "$(gh pr list --head "$BRANCH" --state all --json number --jq '.[].number')" ]; then
+            echo "A PR for '$BRANCH' already exists. No action needed."
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
+            echo "Branch '$BRANCH' exists with no PR. Recovering by opening the PR."
+            # actions/checkout configures a single-branch refspec, so no
+            # origin/$BRANCH tracking ref exists here — use FETCH_HEAD.
+            git fetch --depth=1 origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b "$BRANCH"
 
-          for cfg in images/plcc-ng/.devcontainer/devcontainer.json \
-                     images/plcc-ng-full/.devcontainer/devcontainer.json; do
+            # Pinned version in both prebuilt images.
+            for cfg in images/plcc-ng/.devcontainer/devcontainer.json \
+                       images/plcc-ng-full/.devcontainer/devcontainer.json; do
+              jq --arg v "$LATEST" \
+                '.features["./features/plcc-ng"].version = $v' \
+                "$cfg" > tmp.json
+              mv tmp.json "$cfg"
+            done
+
+            # Feature test: the scenario pin and the assertion that checks it
+            # must move together, or the test fails against its own scenario.
             jq --arg v "$LATEST" \
-              '.features["./features/plcc-ng"].version = $v' \
-              "$cfg" > tmp.json
-            mv tmp.json "$cfg"
-          done
+              '.pinned_version.features["plcc-ng"].version = $v' \
+              test/plcc-ng/scenarios.json > tmp.json
+            mv tmp.json test/plcc-ng/scenarios.json
+            sed -i "s/^EXPECTED_VERSION=.*/EXPECTED_VERSION=\"${LATEST}\"/" \
+              test/plcc-ng/pinned_version.sh
 
-          git add images
-          git commit -m "fix: update plcc-ng to ${LATEST}"
+            # Feature metadata names a concrete version in its proposals and
+            # description. Bump the feature's own patch version so the edit is
+            # actually published — publish skips already-published versions.
+            # The description contains single quotes, so build it in the shell
+            # and pass it as an argument rather than embedding it in the
+            # single-quoted jq program.
+            DESC="PyPI version of plcc-ng to install (e.g. '${LATEST}'), or 'latest' for the newest release."
+            jq --arg v "$LATEST" --arg desc "$DESC" \
+              '.options.version.proposals = ["latest", $v]
+               | .options.version.description = $desc
+               | .version = ((.version | split(".")) as $p
+                   | "\($p[0]).\($p[1]).\($p[2] | tonumber + 1)")' \
+              src/plcc-ng/devcontainer-feature.json > tmp.json
+            mv tmp.json src/plcc-ng/devcontainer-feature.json
 
-          # Race-condition guard: treat push failure as no-op
-          git push origin "$BRANCH" || {
-            echo "Push failed — branch may already exist. Exiting cleanly."
-            exit 0
-          }
+            # Version example in the docs. Anchored on the backticks so it
+            # cannot also rewrite the Java feature's { "version": "21" }.
+            sed -i "s|\`{ \"version\": \"[0-9][^\"]*\" }\`|\`{ \"version\": \"${LATEST}\" }\`|" \
+              docs/choosing-your-image.md
 
-          gh pr create \
-            --title "fix: update plcc-ng to ${LATEST}" \
-            --label "automated" \
+            git add images test src docs
+            if [ -n "$COMMIT_BODY" ]; then
+              git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
+            else
+              git commit -m "$COMMIT_SUBJECT"
+            fi
+
+            # Race-condition guard: treat push failure as no-op
+            git push origin "$BRANCH" || {
+              echo "Push failed — concurrent run. Exiting cleanly."
+              exit 0
+            }
+          fi
+
+          # The PR title becomes the squash-merge commit subject, so it carries
+          # the release type. The body carries the BREAKING CHANGE footer for
+          # the same reason — on a major, both are what semantic-release reads.
+          PR_URL=$(gh pr create \
+            --title "$COMMIT_SUBJECT" \
             --body "$(cat <<EOF
           Automated update: plcc-ng has a new release (${LATEST}).
 
           CI will build and test both images on this PR. Merge if green — merging triggers the release workflow, which publishes new versioned images automatically.
 
           PyPI release: https://pypi.org/project/plcc-ng/${LATEST}/
+
+          ${COMMIT_BODY}
           EOF
           )" \
             --base main \
-            --head "$BRANCH"
+            --head "$BRANCH")
+
+          echo "Opened $PR_URL"
+
+          # Cosmetic only — never fail the run over a missing label or scope.
+          gh pr edit "$PR_URL" --add-label automated \
+            || echo "::warning::Could not apply the 'automated' label to $PR_URL"
