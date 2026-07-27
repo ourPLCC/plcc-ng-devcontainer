@@ -8,8 +8,53 @@ on:
 
 permissions: {}
 
+# Never let two release runs race: a second run could tag or retag while the
+# first is still publishing. Queue instead of cancelling — a half-finished
+# release is worse than a slow one.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 jobs:
+  # On main the only reason to build is to feed a release: PR CI already
+  # verified the code. Infra-only merges (ci:, docs:, chore:) release nothing,
+  # so building was tens of minutes spent to push candidate images that
+  # nothing would ever reference. Ask semantic-release first.
+  plan:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      will_release: ${{ steps.dry.outputs.new_release_published }}
+      version: ${{ steps.dry.outputs.new_release_version }}
+    steps:
+      - name: Generate release bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Would this commit release? (dry run — publishes nothing)
+        id: dry
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          dry_run: true
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Report plan
+        run: |
+          echo "will_release=${{ steps.dry.outputs.new_release_published }}"
+          echo "version=${{ steps.dry.outputs.new_release_version }}"
+
   build:
+    needs: plan
     strategy:
       fail-fast: false
       matrix:
@@ -20,14 +65,20 @@ jobs:
       contents: read
       packages: write
     steps:
+      # Guarded with != 'false' rather than == 'true' so an empty or
+      # unexpected output still builds. Skipping a build a release needs
+      # would leave publish-images with no candidate to retag; an extra
+      # build merely costs time.
       - name: Checkout
+        if: needs.plan.outputs.will_release != 'false'
         uses: actions/checkout@v4
 
       - name: Free disk space for large image build
-        if: matrix.variant == 'plcc-ng-full'
+        if: needs.plan.outputs.will_release != 'false' && matrix.variant == 'plcc-ng-full'
         run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache/CodeQL
 
       - name: Log in to GHCR
+        if: needs.plan.outputs.will_release != 'false'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -35,22 +86,26 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install devcontainer CLI
+        if: needs.plan.outputs.will_release != 'false'
         run: npm install -g @devcontainers/cli
 
       - name: Determine architecture
+        if: needs.plan.outputs.will_release != 'false'
         id: arch
         run: echo "arch=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
       - name: Build candidate image and run smoke test
+        if: needs.plan.outputs.will_release != 'false'
         run: |
           bash scripts/build-and-test.sh "${{ matrix.variant }}" \
             "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:${{ github.sha }}-${{ steps.arch.outputs.arch }}"
 
       - name: Push candidate image
+        if: needs.plan.outputs.will_release != 'false'
         run: docker push "ghcr.io/ourplcc/devcontainers/${{ matrix.variant }}:${{ github.sha }}-${{ steps.arch.outputs.arch }}"
 
   release:
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-latest
     permissions: {}
     outputs:
