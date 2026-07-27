@@ -42,6 +42,11 @@ plcc-ng, Python, Java, and JavaScript are ready to use (plus Haskell in `-full`)
 4. Open a PR — CI tests the feature and builds both images as `pr-{N}` tags.
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
-`fix:` → patch, `feat:` → minor, `feat!:`/`BREAKING CHANGE:` → major.
+`fix:` → patch, `feat:` → minor, `feat:` **with a `BREAKING CHANGE:` footer** →
+major, and `ci:`/`docs:`/`chore:`/`test:` → no release.
+
+Write the footer, not `feat!:`. semantic-release's Angular preset does not parse
+the `!` shorthand, so `feat!:` on its own matches nothing and produces **no
+release at all** — easy to miss, because the pipeline still goes green.
 
 See the [maintainer guide](./docs/maintainer-guide.md) for how releases work.
