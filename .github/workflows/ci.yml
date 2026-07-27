@@ -155,3 +155,46 @@ jobs:
                 'To test, point a devcontainer.json `image` at one of these tags.'
               ].join('\n')
             })
+
+  # The single check the ruleset should require.
+  #
+  # Requiring job names directly is brittle: adding a matrix renames a check
+  # from `build` to `build (x)`, and a new job is simply never required. Both
+  # leave the ruleset waiting on a name nothing reports, which hangs the PR on
+  # "Expected — waiting for status to be reported" with no failure to point at.
+  # This name never changes, so jobs can come and go without a ruleset edit.
+  #
+  # `comment` is deliberately excluded: it only posts image tags, needs
+  # pull-requests: write (unavailable on fork PRs), and must never block a
+  # merge.
+  ci-gate:
+    needs: [changes, test-feature, build]
+    # Must run even when a dependency fails — without this the gate is itself
+    # skipped on failure, reports nothing, and reproduces the exact hang it
+    # exists to prevent.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require all CI jobs to have succeeded
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          TEST_FEATURE: ${{ needs.test-feature.result }}
+          BUILD: ${{ needs.build.result }}
+        run: |
+          failed=0
+          for entry in "changes=$CHANGES" "test-feature=$TEST_FEATURE" "build=$BUILD"; do
+            echo "$entry"
+            # Anything other than success — failure, cancelled, or skipped
+            # because an upstream job failed — must block the merge.
+            case "${entry#*=}" in
+              success) ;;
+              *) failed=1 ;;
+            esac
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::CI did not fully succeed — see the job results above."
+            exit 1
+          fi
+          echo "All required CI jobs succeeded."
