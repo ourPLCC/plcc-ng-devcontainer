@@ -145,11 +145,34 @@ One-time steps when this repository is first published to GitHub:
 
 ## Housekeeping
 
-- Per-arch candidate tags (`{sha}-amd64`/`{sha}-arm64`) accumulate in GHCR,
-  as do `pr-{N}` tags from PR builds. They are harmless; delete old ones via
-  the package settings UI if clutter bothers you. Candidates are only
-  produced for commits that actually release — infra-only merges skip the
-  build entirely (see `plan`, above), so they no longer leave orphans.
+- **Never delete a `{sha}-amd64` / `{sha}-arm64` version that belongs to a
+  release.** They look like disposable build leftovers and are not:
+  `publish-images` assembles the multi-arch manifest for `X.Y.Z`, `X.Y`, `X`
+  and `latest` by referencing those per-arch manifests *by digest*. Deleting
+  one breaks `docker pull` for every tag pointing at it — including `:1`,
+  which `docs/choosing-your-image.md` tells courses to pin for a term.
+
+  Since the `plan` job landed, a candidate is only produced by a commit that
+  actually releases, so in practice **every new candidate is load-bearing**.
+
+- Safe to delete: `pr-{N}` tags, and candidates left over from before `plan`
+  existed — commits that built but published nothing. Verify rather than
+  guess: a candidate is safe only if no release index references its digest.
+
+  ```bash
+  REPO=ourplcc/devcontainers/plcc-ng   # or plcc-ng-full
+  A='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json'
+  TOK=$(curl -s "https://ghcr.io/token?scope=repository:$REPO:pull&service=ghcr.io" | jq -r .token)
+
+  # digests that releases depend on
+  for t in $(curl -s -H "Authorization: Bearer $TOK" "https://ghcr.io/v2/$REPO/tags/list" \
+             | jq -r '.tags[]' | grep -Ev -- '-amd64$|-arm64$|^pr-'); do
+    curl -s -H "Authorization: Bearer $TOK" -H "Accept: $A" \
+      "https://ghcr.io/v2/$REPO/manifests/$t" | jq -r '.manifests[]?.digest'
+  done | sort -u
+  ```
+
+  Anything whose digest appears in that list must stay.
 - Renovate/Dependabot are not configured; the base image and language
   feature versions float by design (`base:ubuntu`, Node `lts`), pinned only
   where reproducibility matters (plcc-ng, Java major, Python minor).
