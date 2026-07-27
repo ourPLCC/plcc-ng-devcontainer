@@ -52,14 +52,39 @@ jobs:
           # semantic-release uses does not parse the `!` shorthand, so a
           # `feat!:` subject whose BREAKING CHANGE footer went missing yields
           # no release at all. `feat:` degrades to a minor instead.
-          if [ "${LATEST%%.*}" != "${CURRENT%%.*}" ]; then
+          OLD_MAJOR="${CURRENT%%.*}"
+          NEW_MAJOR="${LATEST%%.*}"
+          REVIEW_NOTE=""
+
+          if [ "$NEW_MAJOR" != "$OLD_MAJOR" ]; then
+            MAJOR_BUMP=true
             COMMIT_SUBJECT="feat: update plcc-ng to ${LATEST}"
             COMMIT_BODY="BREAKING CHANGE: plcc-ng ${LATEST} is a new major version (was ${CURRENT}). Images already published under the previous major tag keep plcc-ng ${CURRENT}; this release publishes under a new major tag."
+            # The image tag guidance is prose and cannot be rewritten safely by
+            # a script: it names both the new major and the one being left
+            # behind, so a blind :N -> :M substitution produces text that is
+            # confidently wrong. Ask for a human instead.
+            REVIEW_NOTE=$(printf '%s\n' \
+              "" \
+              "---" \
+              "" \
+              "### :warning: Major bump — needs a human eye" \
+              "" \
+              "The fully qualified image references in \`README.md\`, \`devcontainer.json\` and \`docs/choosing-your-image.md\` were retagged \`:${OLD_MAJOR}\` → \`:${NEW_MAJOR}\` automatically." \
+              "" \
+              "The surrounding guidance in \`docs/choosing-your-image.md\` was **not** touched and still describes the previous major. Please review by hand:" \
+              "" \
+              "- the version tag table (\`${OLD_MAJOR}\`, \`${OLD_MAJOR}.1\`, \`${OLD_MAJOR}.1.3\`)" \
+              "- the \"pin the major tag\" recommendation" \
+              "- the paragraph explaining which plcc-ng line each tag carries — \`:${OLD_MAJOR}\` now becomes the frozen one, and \`:${NEW_MAJOR}\` the current one" \
+              "" \
+              "The feature reference \`ghcr.io/ourplcc/features/plcc-ng:1\` is deliberately untouched: it tracks the feature's own version, not plcc-ng's.")
           else
+            MAJOR_BUMP=false
             COMMIT_SUBJECT="fix: update plcc-ng to ${LATEST}"
             COMMIT_BODY=""
           fi
-          echo "Release type: $COMMIT_SUBJECT"
+          echo "Release type: $COMMIT_SUBJECT (major bump: $MAJOR_BUMP)"
 
           # Idempotency guard: keyed on the PR, not the branch. A branch with no
           # PR means an earlier run died between push and PR creation; that must
@@ -118,7 +143,30 @@ jobs:
             sed -i "s|\`{ \"version\": \"[0-9][^\"]*\" }\`|\`{ \"version\": \"${LATEST}\" }\`|" \
               docs/choosing-your-image.md
 
-            git add images test src docs
+            # On a major bump the published image tag changes, so the
+            # copy-paste snippets naming it have to follow or they point at
+            # the previous major line.
+            #
+            # perl, not sed: this needs a negative lookahead so that :2 does
+            # not match inside :20 or :2.1, and BSD sed (what a maintainer
+            # runs locally) lacks both \b and lookaheads. \Q..\E quotes the
+            # dots and slashes in the interpolated image path.
+            #
+            # Matching the fully qualified path is what keeps
+            # ghcr.io/ourplcc/features/plcc-ng:1 safe — that tag tracks the
+            # feature's own version and must not move with plcc-ng's.
+            if [ "$MAJOR_BUMP" = true ]; then
+              echo "Retagging image references :${OLD_MAJOR} -> :${NEW_MAJOR}"
+              for img in plcc-ng plcc-ng-full; do
+                perl -pi -e \
+                  "s{\Qghcr.io/ourplcc/devcontainers/${img}:${OLD_MAJOR}\E(?![0-9.])}{ghcr.io/ourplcc/devcontainers/${img}:${NEW_MAJOR}}g" \
+                  README.md devcontainer.json docs/choosing-your-image.md
+              done
+            fi
+
+            # README.md and devcontainer.json only change on a major bump;
+            # git add is a no-op for them otherwise.
+            git add images test src docs README.md devcontainer.json
             if [ -n "$COMMIT_BODY" ]; then
               git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
             else
@@ -135,6 +183,13 @@ jobs:
           # The PR title becomes the squash-merge commit subject, so it carries
           # the release type. The body carries the BREAKING CHANGE footer for
           # the same reason — on a major, both are what semantic-release reads.
+          #
+          # Do NOT move ${COMMIT_BODY} below ${REVIEW_NOTE} to "put the footer
+          # last". Conventional Commits says footers come last, but the parser
+          # disagrees in practice: with the markdown review note in between,
+          # a squash of this body analyses as `minor` instead of `major` —
+          # verified by running @semantic-release/commit-analyzer over both
+          # orderings. The footer must precede the note.
           PR_URL=$(gh pr create \
             --title "$COMMIT_SUBJECT" \
             --body "$(cat <<EOF
@@ -145,6 +200,7 @@ jobs:
           PyPI release: https://pypi.org/project/plcc-ng/${LATEST}/
 
           ${COMMIT_BODY}
+          ${REVIEW_NOTE}
           EOF
           )" \
             --base main \
