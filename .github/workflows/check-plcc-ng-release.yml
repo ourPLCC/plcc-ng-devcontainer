@@ -70,9 +70,9 @@ jobs:
               "" \
               "### :warning: Major bump — needs a human eye" \
               "" \
-              "The fully qualified image references in \`README.md\`, \`devcontainer.json\` and \`docs/choosing-your-image.md\` were retagged \`:${OLD_MAJOR}\` → \`:${NEW_MAJOR}\` automatically." \
+              "\`README.md\`, \`devcontainer.json\` and \`docs/choosing-your-image.md\` **are** modified by this PR: every fully qualified image reference in them was retagged \`:${OLD_MAJOR}\` → \`:${NEW_MAJOR}\` automatically." \
               "" \
-              "The surrounding guidance in \`docs/choosing-your-image.md\` was **not** touched and still describes the previous major. Please review by hand:" \
+              "What was **not** rewritten is the surrounding guidance *text* in \`docs/choosing-your-image.md\`. It still describes the previous major, and a script cannot fix it safely — the wording names both the new major and the one being left behind. Please review these by hand:" \
               "" \
               "- the version tag table (\`${OLD_MAJOR}\`, \`${OLD_MAJOR}.1\`, \`${OLD_MAJOR}.1.3\`)" \
               "- the \"pin the major tag\" recommendation" \
