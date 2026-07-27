@@ -44,36 +44,45 @@ jobs:
 
           BRANCH="chore/update-plcc-ng-${LATEST}"
 
-          # Idempotency guard: PR branch already exists
-          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
-            echo "Branch '$BRANCH' already exists. PR already open."
+          # Idempotency guard: keyed on the PR, not the branch. A branch with no
+          # PR means an earlier run died between push and PR creation; that must
+          # be recoverable, not mistaken for work already done.
+          if [ -n "$(gh pr list --head "$BRANCH" --state all --json number --jq '.[].number')" ]; then
+            echo "A PR for '$BRANCH' already exists. No action needed."
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
+            echo "Branch '$BRANCH' exists with no PR. Recovering by opening the PR."
+            # actions/checkout configures a single-branch refspec, so no
+            # origin/$BRANCH tracking ref exists here — use FETCH_HEAD.
+            git fetch --depth=1 origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b "$BRANCH"
 
-          for cfg in images/plcc-ng/.devcontainer/devcontainer.json \
-                     images/plcc-ng-full/.devcontainer/devcontainer.json; do
-            jq --arg v "$LATEST" \
-              '.features["./features/plcc-ng"].version = $v' \
-              "$cfg" > tmp.json
-            mv tmp.json "$cfg"
-          done
+            for cfg in images/plcc-ng/.devcontainer/devcontainer.json \
+                       images/plcc-ng-full/.devcontainer/devcontainer.json; do
+              jq --arg v "$LATEST" \
+                '.features["./features/plcc-ng"].version = $v' \
+                "$cfg" > tmp.json
+              mv tmp.json "$cfg"
+            done
 
-          git add images
-          git commit -m "fix: update plcc-ng to ${LATEST}"
+            git add images
+            git commit -m "fix: update plcc-ng to ${LATEST}"
 
-          # Race-condition guard: treat push failure as no-op
-          git push origin "$BRANCH" || {
-            echo "Push failed — branch may already exist. Exiting cleanly."
-            exit 0
-          }
+            # Race-condition guard: treat push failure as no-op
+            git push origin "$BRANCH" || {
+              echo "Push failed — concurrent run. Exiting cleanly."
+              exit 0
+            }
+          fi
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "fix: update plcc-ng to ${LATEST}" \
-            --label "automated" \
             --body "$(cat <<EOF
           Automated update: plcc-ng has a new release (${LATEST}).
 
@@ -83,4 +92,10 @@ jobs:
           EOF
           )" \
             --base main \
-            --head "$BRANCH"
+            --head "$BRANCH")
+
+          echo "Opened $PR_URL"
+
+          # Cosmetic only — never fail the run over a missing label or scope.
+          gh pr edit "$PR_URL" --add-label automated \
+            || echo "::warning::Could not apply the 'automated' label to $PR_URL"
