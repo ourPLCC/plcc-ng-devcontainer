@@ -8,6 +8,13 @@ on:
 
 permissions: {}
 
+# Pushing to an open PR leaves the previous run building images that are
+# already superseded — two multi-GB builds of the same branch at once. Only
+# the newest commit's result matters, so cancel the older run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Building both images takes tens of minutes, and most of that is wasted on
   # PRs that touch only workflows or docs. Every job below still runs and still
