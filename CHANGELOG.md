@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/ourPLCC/plcc-ng-devcontainer/compare/v2.0.0...v2.0.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* update plcc-ng to 2.0.1 ([f96a070](https://github.com/ourPLCC/plcc-ng-devcontainer/commit/f96a0702d45a41f2e40a673f5b2779f9b6543a40))
+
 # [2.0.0](https://github.com/ourPLCC/plcc-ng-devcontainer/compare/v1.0.0...v2.0.0) (2026-07-27)
 
 
