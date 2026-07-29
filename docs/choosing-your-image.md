@@ -76,7 +76,7 @@ installs plcc-ng and Python; add language features as needed:
 
 The feature's `version` option pins a plcc-ng release from
 [PyPI](https://pypi.org/project/plcc-ng/), e.g.
-`{ "version": "2.0.0" }`; the default is `latest`.
+`{ "version": "2.0.1" }`; the default is `latest`.
 
 Note: the first Codespaces start of a feature-composed devcontainer builds
 the container from scratch (several minutes). The prebuilt images exist to

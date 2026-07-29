@@ -1,6 +1,6 @@
 {
   "id": "plcc-ng",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "PLCC-NG",
   "description": "Installs plcc-ng (Programming Language Compiler Compiler, next generation) from PyPI.",
   "documentationURL": "https://github.com/ourPLCC/plcc-ng-devcontainer",
@@ -10,9 +10,9 @@
       "default": "latest",
       "proposals": [
         "latest",
-        "2.0.0"
+        "2.0.1"
       ],
-      "description": "PyPI version of plcc-ng to install (e.g. '2.0.0'), or 'latest' for the newest release."
+      "description": "PyPI version of plcc-ng to install (e.g. '2.0.1'), or 'latest' for the newest release."
     }
   },
   "dependsOn": {
