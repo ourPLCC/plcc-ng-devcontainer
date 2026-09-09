@@ -1,3 +1,11 @@
+## [2.0.3](https://github.com/ourPLCC/plcc-ng-devcontainer/compare/v2.0.2...v2.0.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* unpin stale java feature in image lock files ([9681659](https://github.com/ourPLCC/plcc-ng-devcontainer/commit/9681659399cf69d3c232890dc33e09ef3be8fdfd))
+* update plcc-ng to 2.0.3 ([1bb29c1](https://github.com/ourPLCC/plcc-ng-devcontainer/commit/1bb29c18827e05e9869700c5f61013b78deadb76))
+
 ## [2.0.2](https://github.com/ourPLCC/plcc-ng-devcontainer/compare/v2.0.1...v2.0.2) (2026-08-12)
 
 
