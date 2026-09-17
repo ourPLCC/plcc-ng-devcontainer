@@ -49,12 +49,12 @@ Image versions come from semantic-release; the **feature is versioned
 independently** — bump the `version` field in
 `src/plcc-ng/devcontainer-feature.json` in the same PR as any feature change.
 
-## Weekly plcc-ng bump
+## Nightly plcc-ng bump
 
-`check-plcc-ng-release.yml` runs Mondays 09:00 UTC (and via **Run workflow**).
-It compares the latest PyPI release of plcc-ng against the version pinned in
-`images/plcc-ng/.devcontainer/devcontainer.json` and opens a PR when they
-differ. Review CI and merge if green.
+`check-plcc-ng-release.yml` runs nightly at 09:00 UTC (and via **Run
+workflow**). It compares the latest PyPI release of plcc-ng against the
+version pinned in `images/plcc-ng/.devcontainer/devcontainer.json` and opens
+a PR when they differ. Review CI and merge if green.
 
 **The release type is derived, not fixed.** A new plcc-ng *major* opens a
 `feat:` PR carrying a `BREAKING CHANGE:` footer, so the images release as a
