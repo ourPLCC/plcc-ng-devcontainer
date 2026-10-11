@@ -34,19 +34,4 @@ plcc-ng, Python, Java, and JavaScript are ready to use (plus Haskell in `-full`)
 
 ## Contributing
 
-1. Fork and clone this repository.
-2. Open it in VS Code or Codespaces — the repo's devcontainer includes the
-   devcontainer CLI and Docker.
-3. Make your changes; test with `bash scripts/build-and-test.sh plcc-ng` and
-   `devcontainer features test --project-folder . --features plcc-ng --base-image mcr.microsoft.com/devcontainers/base:ubuntu`.
-4. Open a PR — CI tests the feature and builds both images as `pr-{N}` tags.
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-`fix:` → patch, `feat:` → minor, `feat:` **with a `BREAKING CHANGE:` footer** →
-major, and `ci:`/`docs:`/`chore:`/`test:` → no release.
-
-Write the footer, not `feat!:`. semantic-release's Angular preset does not parse
-the `!` shorthand, so `feat!:` on its own matches nothing and produces **no
-release at all** — easy to miss, because the pipeline still goes green.
-
-See the [maintainer guide](./docs/maintainer-guide.md) for how releases work.
+See [CONTRIBUTING.md](CONTRIBUTING.md).

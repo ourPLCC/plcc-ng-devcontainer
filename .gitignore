@@ -10,3 +10,6 @@ npm-debug.log*
 # Synced/copied at build time by scripts — do not commit
 images/*/.devcontainer/features/
 images/*/smoke-test.sh
+
+# Implementation plans live in the worktree and are never committed
+.plans/
