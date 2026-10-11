@@ -105,7 +105,8 @@ bash scripts/reuse.sh lint
 
 The repo's own devcontainer (`.devcontainer/devcontainer.json`) includes
 Node, Docker-in-Docker, and the devcontainer CLI, so all of the above works
-inside a Codespace.
+inside it. Open it in VS Code on your own machine, not a Codespace; see
+[CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Initial repository setup (bootstrap)
 
