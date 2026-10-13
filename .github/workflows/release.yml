@@ -22,6 +22,7 @@ jobs:
   # nothing would ever reference. Ask semantic-release first.
   plan:
     runs-on: ubuntu-latest
+    environment: release
     permissions: {}
     outputs:
       will_release: ${{ steps.dry.outputs.new_release_published }}
@@ -107,6 +108,7 @@ jobs:
   release:
     needs: [plan, build]
     runs-on: ubuntu-latest
+    environment: release
     permissions: {}
     outputs:
       published: ${{ steps.semantic.outputs.new_release_published }}
